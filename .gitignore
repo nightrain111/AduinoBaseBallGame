@@ -1,0 +1,42 @@
+# ── Unity 자동 생성 폴더 ──────────────────────────────
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# ── Visual Studio / Rider 캐시 ────────────────────────
+.vs/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.idea/
+*.sln.iml
+
+# ── 에셋 임포트 캐시 ──────────────────────────────────
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+
+# ── OS 잡파일 ────────────────────────────────────────
+.DS_Store
+Thumbs.db
