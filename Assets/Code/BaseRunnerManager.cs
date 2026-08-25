@@ -37,6 +37,11 @@ public class BaseRunnerManager : MonoBehaviour
 
         gm.OnRunnerMove   += HandleRunnerMove;
         gm.OnSideChanged  += ClearAllRunners;
+
+        Debug.Log($"[BaseRunnerManager] Start 완료 — home={(home==null?"NULL":"OK")}, first={(first==null?"NULL":"OK")}, " +
+                  $"second={(second==null?"NULL":"OK")}, third={(third==null?"NULL":"OK")}, " +
+                  $"awayRunnerPrefab={(awayRunnerPrefab==null?"NULL":awayRunnerPrefab.name)}, " +
+                  $"homeRunnerPrefab={(homeRunnerPrefab==null?"NULL":homeRunnerPrefab.name)}");
     }
 
     void OnDestroy()
@@ -59,8 +64,14 @@ public class BaseRunnerManager : MonoBehaviour
 
     void HandleRunnerMove(int fromBase, int toBase)
     {
+        Debug.Log($"[BaseRunnerManager] HandleRunnerMove({fromBase} → {toBase}) 호출됨");
+
         var prefab = CurrentTeamRunnerPrefab;
-        if (prefab == null || home == null) return;
+        if (prefab == null || home == null)
+        {
+            Debug.LogWarning($"[BaseRunnerManager] 여기서 멈춤 — prefab={(prefab==null?"NULL":"OK")}, home={(home==null?"NULL":"OK")}");
+            return;
+        }
 
         GameObject runner;
         if (fromBase == 0)

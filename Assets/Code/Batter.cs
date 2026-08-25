@@ -23,6 +23,7 @@ public class Batter : MonoBehaviour
     [SerializeField] private Transform runOffTarget; // 안타 났을 때 스윙 후 뛰어갈 목표 지점 (화면 밖/1루 방향)
     [SerializeField] private AnimationClip runClip;
     [SerializeField] private float runOffSpeed = 5f;
+    [SerializeField] private float minRunOffDuration = 0.6f; // Run Off Target이 가까워도 최소 이 시간만큼은 뛰는 모습을 보여줌
 
     [Header("스윙 중 위치 드리프트 제한")]
     [SerializeField] private float maxSwingDrift = 0.15f; // Root Motion으로 스윙 중 원래 자리에서 벗어날 수 있는 최대 거리
@@ -187,11 +188,14 @@ public class Batter : MonoBehaviour
             animator.speed = 1f;
         }
 
-        while (Vector3.Distance(transform.position, runOffTarget.position) > 0.2f)
+        float elapsed = 0f;
+        while (elapsed < minRunOffDuration || Vector3.Distance(transform.position, runOffTarget.position) > 0.2f)
         {
             Vector3 dir = runOffTarget.position - transform.position;
-            transform.position = Vector3.MoveTowards(transform.position, runOffTarget.position, runOffSpeed * Time.deltaTime);
+            if (dir.magnitude > 0.2f)
+                transform.position = Vector3.MoveTowards(transform.position, runOffTarget.position, runOffSpeed * Time.deltaTime);
             if (dir.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            elapsed += Time.deltaTime;
             yield return null;
         }
 

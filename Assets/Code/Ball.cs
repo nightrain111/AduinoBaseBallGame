@@ -14,9 +14,6 @@ public class Ball : MonoBehaviour
     [SerializeField] private float strikeZoneHeight   = 1.0f; // 스트존 높이 (타자 루트 기준)
     [SerializeField] private float releaseHeight       = 1.6f; // 투수 릴리즈 높이 (pitchOrigin 루트 기준)
 
-    [Header("존 크기 (볼일 때 존 밖으로 벗어나는 정도)")]
-    [SerializeField] private float ballOffsetRange = 0.6f;
-
     [Header("구종별 궤적 변화")]
     [SerializeField] private float curveballDrop = 0.5f;
     [SerializeField] private float sliderSide     = 0.3f;
@@ -70,12 +67,10 @@ public class Ball : MonoBehaviour
 
         gameObject.SetActive(true); // 이전에 스트라이크로 숨겨졌을 수 있으니 다시 켬
 
-        Vector3 target = strikeZoneCenter.position + Vector3.up * strikeZoneHeight;
-        if (!GameManager.Instance.IsStrikePitch)
-        {
-            target += strikeZoneCenter.right * Random.Range(-ballOffsetRange, ballOffsetRange)
-                    + strikeZoneCenter.up    * Random.Range(-ballOffsetRange, ballOffsetRange);
-        }
+        var gm = GameManager.Instance;
+        Vector3 target = strikeZoneCenter.position + Vector3.up * strikeZoneHeight
+                        + strikeZoneCenter.right * gm.PitchOffsetX
+                        + strikeZoneCenter.up    * gm.PitchOffsetY;
         pitchTarget = target;
 
         rb.isKinematic     = true; // kinematic 상태에서는 velocity 설정 불가 — 다음 Launch()에서 항상 새로 덮어씀

@@ -12,6 +12,7 @@ public class RunnerAnimator : MonoBehaviour
 
     [Header("움직임 감지 (초당 이 거리 이상 움직이면 Run)")]
     [SerializeField] private float moveThreshold = 0.3f;
+    [SerializeField] private float minStateHoldTime = 0.25f; // 상태 전환 후 최소 이 시간 동안은 다시 안 바뀌게 (떨림 방지)
 
     private Animator animator;
     private AnimatorOverrideController overrideCtrl;
@@ -20,12 +21,14 @@ public class RunnerAnimator : MonoBehaviour
 
     private Vector3 lastPosition;
     private bool isRunning;
+    private float lastStateChangeTime = -999f;
     private const string IDLE_STATE = "Baseball Idle"; // Batter.cs와 동일한 스테이트 이름 가정
 
     void Start()
     {
         SetupAnimator();
         lastPosition = transform.position;
+        Debug.Log($"[RunnerAnimator] Start 완료 — idleClip={(idleClip==null?"NULL":idleClip.name)}, runClip={(runClip==null?"NULL":runClip.name)}, slotIndex={slotIndex}");
         PlayIdle();
     }
 
@@ -37,18 +40,29 @@ public class RunnerAnimator : MonoBehaviour
         lastPosition = transform.position;
 
         bool shouldRun = speed > moveThreshold;
-        if (shouldRun != isRunning)
+
+        // 최근에 막 전환했으면(떨림 방지용 최소 유지시간 이내) 이번 프레임은 무시
+        if (shouldRun != isRunning && Time.time - lastStateChangeTime >= minStateHoldTime)
         {
+            Debug.Log($"[RunnerAnimator] 상태 전환: isRunning {isRunning} → {shouldRun} (speed={speed:F2}, threshold={moveThreshold})");
             isRunning = shouldRun;
+            lastStateChangeTime = Time.time;
             if (isRunning) PlayRun(); else PlayIdle();
         }
     }
 
+    // Play 모드에서 컴포넌트 우클릭 → 이 항목으로 이동/스폰 로직 다 건너뛰고 강제 재생 테스트 가능
+    [ContextMenu("TEST: Force Play Run")]
+    void TestForcePlayRun() => PlayRun();
+
     void PlayRun()
     {
+        Debug.Log($"[RunnerAnimator] PlayRun() 호출됨, runClip={(runClip==null?"NULL — 여기서 멈춤":runClip.name)}, 호출 전 animator.speed={animator.speed}");
         if (runClip == null) return;
         SetOverride(runClip);
         animator.Play(IDLE_STATE, 0, 0f);
+        animator.speed = 1f;
+        Debug.Log($"[RunnerAnimator] Play('{IDLE_STATE}') 호출 완료, 현재 스테이트: {animator.GetCurrentAnimatorStateInfo(0).IsName(IDLE_STATE)}, speed={animator.speed}");
     }
 
     void PlayIdle()
@@ -56,6 +70,7 @@ public class RunnerAnimator : MonoBehaviour
         if (idleClip == null) return;
         SetOverride(idleClip);
         animator.Play(IDLE_STATE, 0, 0f);
+        animator.speed = 1f;
     }
 
     void SetOverride(AnimationClip clip)
@@ -70,9 +85,17 @@ public class RunnerAnimator : MonoBehaviour
         animator = GetComponent<Animator>();
         if (animator == null) { Debug.LogError("[RunnerAnimator] Animator 없음"); return; }
 
-        overrideCtrl  = new AnimatorOverrideController(animator.runtimeAnimatorController);
+        var baseController = animator.runtimeAnimatorController;
+        Debug.Log($"[RunnerAnimator] baseController = {(baseController == null ? "NULL" : baseController.name)} " +
+                   $"(type: {baseController?.GetType().Name})");
+
+        overrideCtrl  = new AnimatorOverrideController(baseController);
         overridesList = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideCtrl.overridesCount);
         overrideCtrl.GetOverrides(overridesList);
+
+        Debug.Log($"[RunnerAnimator] overridesCount = {overrideCtrl.overridesCount}, overridesList.Count = {overridesList.Count}");
+        for (int i = 0; i < overridesList.Count; i++)
+            Debug.Log($"[RunnerAnimator]   slot {i}: Key = {(overridesList[i].Key == null ? "null" : overridesList[i].Key.name)}");
 
         for (int i = 0; i < overridesList.Count; i++)
         {
