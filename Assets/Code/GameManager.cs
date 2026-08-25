@@ -22,7 +22,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float minPitchDuration    = 1.4f;
     [SerializeField] private float maxPitchDuration    = 2.6f;
     [SerializeField] private float pitchSpeedMultiplier = 1f; // 1보다 크면 공이 더 빠름(시간 단축), 작으면 더 느림
+    [SerializeField] private float pitchLeadTime = 0.4f; // 투수 준비동작(와인드업)이 이만큼 먼저 재생된 뒤에 공이 실제로 날아가기 시작함
     [SerializeField, Range(0f, 1f)] private float strikeZoneRate = 0.65f;
+    [SerializeField] private float ballOffsetRange = 0.6f; // 볼일 때 스트존 밖으로 벗어나는 정도 (미터) — Ball/판정 UI가 공용으로 씀
 
     [Header("타이밍 창 (비율 0~1)")]
     [SerializeField] private float perfectWindow = 0.13f;
@@ -70,6 +72,8 @@ public class GameManager : MonoBehaviour
     public float     PitchTimer    { get; private set; }
     public bool      IsStrikePitch { get; private set; }
     public float     TimingTarget  { get; private set; }   // 최적 스윙 타이밍 비율 (0~1)
+    public float     PitchOffsetX  { get; private set; }   // 스트존 중앙 기준 좌우 오프셋 (미터, 스트라이크면 0)
+    public float     PitchOffsetY  { get; private set; }   // 스트존 중앙 기준 상하 오프셋 (미터, 스트라이크면 0)
 
     // ── 이벤트 ───────────────────────────────────────────
     public event Action               OnPitchStart;
@@ -126,6 +130,17 @@ public class GameManager : MonoBehaviour
         CurrentPitch  = (PitchType)Random.Range(0, 4);
         IsStrikePitch = Random.value < strikeZoneRate;
 
+        if (IsStrikePitch)
+        {
+            PitchOffsetX = 0f;
+            PitchOffsetY = 0f;
+        }
+        else
+        {
+            PitchOffsetX = Random.Range(-ballOffsetRange, ballOffsetRange);
+            PitchOffsetY = Random.Range(-ballOffsetRange, ballOffsetRange);
+        }
+
         // 구종별 구속 배율
         float speedMult = CurrentPitch switch
         {
@@ -137,13 +152,22 @@ public class GameManager : MonoBehaviour
         };
 
         PitchDuration   = Random.Range(minPitchDuration, maxPitchDuration) * speedMult / Mathf.Max(pitchSpeedMultiplier, 0.01f);
-        PitchTimer      = 0f;
         TimingTarget    = Random.Range(0.65f, 0.80f);
-        waitingForSwing = true;
-        State           = GameState.Pitching;
+        State           = GameState.Pitching; // 재진입 방지 — waitingForSwing은 와인드업 끝난 뒤에 켬
 
         ActiveBatter?.OnPitchBegin();
-        ActivePitcher?.Pitch(PitchDuration);
+        ActivePitcher?.Pitch(PitchDuration); // 준비동작(와인드업) 먼저 재생 시작
+
+        StartCoroutine(ReleaseAfterWindup());
+    }
+
+    // 투수 와인드업이 pitchLeadTime만큼 먼저 재생된 뒤에 실제로 공을 날린다 (타이머 시작 + OnPitchStart).
+    IEnumerator ReleaseAfterWindup()
+    {
+        yield return new WaitForSeconds(pitchLeadTime);
+
+        PitchTimer      = 0f;
+        waitingForSwing = true;
         OnPitchStart?.Invoke();
 
         Debug.Log($"[GM] {CurrentPitch} | {(IsStrikePitch ? "스트라이크존" : "볼존")} | {PitchDuration:F2}s | target={TimingTarget:F2}");
